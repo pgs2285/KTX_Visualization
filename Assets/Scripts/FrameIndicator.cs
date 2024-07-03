@@ -9,16 +9,10 @@ public class FrameIndicator : MonoBehaviour
     [SerializeField] private int size = 25;
     [SerializeField] private Color color = Color.red;
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
     // Update is called once per frame
     void Update()
     {
-        deltaTime += (Time.unscaledDeltaTime - deltaTime) * 0.1f;
+        deltaTime += (Time.unscaledDeltaTime - deltaTime) * 0.5f;
     }
 
     private void OnGUI()
