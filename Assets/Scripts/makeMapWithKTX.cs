@@ -79,6 +79,52 @@ public class makeMapWithKTX : MonoBehaviour
         _timeRequired.text = sw.ElapsedMilliseconds.ToString() + "ms";
     }
 
+    public async void LoadImagesKtx2(string Encode)
+    {
+        DestroyCanvasChild();
+        System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+        sw.Start();
+        for (int y = 0; y < 5; y++)
+        {
+            for (int x = 0; x < 10; x++)
+            {
+                string fileName = $"{y:D4}_{x:D4}.ktx2";
+                string imagePath = $"SaturateImages/{Encode}/{y:D4}/";
+                string filePath = Path.Combine(Application.dataPath, imagePath, fileName);
+                int fileHash = filePath.GetHashCode();
+
+                if (_textureCaches.ContainsKey(fileHash))
+                {
+                    CachedTexture cachedTexture = _textureCaches[fileHash];
+                    CreateImageObject(cachedTexture.Texture, x, 4 - y, cachedTexture.IsXFlipped, cachedTexture.IsYFlipped);
+                    continue;
+                }
+
+                var texture = new KtxTexture();
+                byte[] fileData = File.ReadAllBytes(filePath);
+                NativeArray<byte> nativeArray = new NativeArray<byte>(fileData, Allocator.Persistent);
+                NativeSlice<byte> nativeSlice = new NativeSlice<byte>(nativeArray);
+
+                var result = await texture.LoadFromBytes(nativeSlice);
+                nativeArray.Dispose(); // 로드하고 Dispose
+                if (result != null)
+                {
+                    Texture2D _texture = result.texture;
+                    if (_texture != null)
+                    {
+                        bool isXFlip = result.orientation.IsXFlipped();
+                        bool isYFlip = result.orientation.IsYFlipped();
+                        _textureCaches[fileHash] = new CachedTexture(_texture, isXFlip, isYFlip);
+                        CreateImageObject(_texture, x, 4 - y, isXFlip, isYFlip);
+                    }
+                }
+            }
+        }
+        sw.Stop();
+        _timeRequired.text = sw.ElapsedMilliseconds.ToString() + "ms";
+    }
+
+
     void C_LoadJPGImage()
     {
         System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
@@ -156,6 +202,6 @@ public class makeMapWithKTX : MonoBehaviour
             Texture = texture;
             IsXFlipped = isXFlipped;
             IsYFlipped = isYFlipped;
-        } // 이상하게 한번 저장된값 꺼내오면 flip상태가 자기 멋대로 되어있으므로, 여기서 값들까지 완전히 저장
+        } // 이상하게 한번 저장된값 꺼내오면 flip상태가 자기 멋대로 되어있으므로, 여기서 완성
     }
 }

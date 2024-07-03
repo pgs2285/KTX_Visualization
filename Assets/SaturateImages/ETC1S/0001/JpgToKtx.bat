@@ -1,0 +1,1 @@
+for /r %%i in (*.jpg) do "C:\Program Files\KTX-Software\bin\toktx" --bcmp --linear --automipmap --lower_left_maps_to_s0t0 %%~dpni.ktx2 %%i
