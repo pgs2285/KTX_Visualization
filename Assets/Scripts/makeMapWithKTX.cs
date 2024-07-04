@@ -106,7 +106,7 @@ public class makeMapWithKTX : MonoBehaviour
                 NativeSlice<byte> nativeSlice = new NativeSlice<byte>(nativeArray);
 
                 var result = await texture.LoadFromBytes(nativeSlice);
-                nativeArray.Dispose(); // 로드하고 Dispose
+                nativeArray.Dispose(); // 로드하고 Dispose 
                 if (result != null)
                 {
                     Texture2D _texture = result.texture;
@@ -114,6 +114,7 @@ public class makeMapWithKTX : MonoBehaviour
                     {
                         bool isXFlip = result.orientation.IsXFlipped();
                         bool isYFlip = result.orientation.IsYFlipped();
+                        if (Encode == ("KTX")) isYFlip = false; // ktx는 --lower_left_maps_to_s0t0옵션을 주어도 yflip이 true로 나와 예외처리
                         _textureCaches[fileHash] = new CachedTexture(_texture, isXFlip, isYFlip);
                         CreateImageObject(_texture, x, 4 - y, isXFlip, isYFlip);
                     }
