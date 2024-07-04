@@ -2440,7 +2440,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 157395289}
         m_TargetAssemblyTypeName: makeMapWithKTX, Assembly-CSharp
-        m_MethodName: LoadImages
+        m_MethodName: LoadImagesKtx2
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
