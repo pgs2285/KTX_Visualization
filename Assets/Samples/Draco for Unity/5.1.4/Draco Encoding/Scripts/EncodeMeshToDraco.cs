@@ -12,7 +12,7 @@ namespace Draco.Sample.Encode
     [RequireComponent(typeof(MeshFilter))]
     public class EncodeMeshToDraco : MonoBehaviour
     {
-        async void Start()
+        async void OnEnable()
         {
             #region EncodeDraco
             var meshFilter = GetComponent<MeshFilter>();
@@ -37,7 +37,7 @@ namespace Draco.Sample.Encode
             for (var i = 0; i < encodeResults.Length; i++)
             {
                 var encodeResult = encodeResults[i];
-                var destination = Path.Combine(Application.persistentDataPath, $"{meshName}-submesh-{i}.drc");
+                var destination = Path.Combine(Application.dataPath, $"{meshName}-submesh-{i}.drc.bytes");
                 File.WriteAllBytes(destination, encodeResult.data.ToArray());
                 Debug.Log($"Saved submesh {i} to {destination}");
                 // It's required to dispose the results
@@ -45,5 +45,6 @@ namespace Draco.Sample.Encode
             }
             #endregion EncodeDraco
         }
+
     }
 }

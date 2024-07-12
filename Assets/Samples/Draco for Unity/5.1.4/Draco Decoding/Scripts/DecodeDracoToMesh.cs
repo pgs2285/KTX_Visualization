@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2023 Unity Technologies and the Draco for Unity authors
 // SPDX-License-Identifier: Apache-2.0
 
+using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Draco.Sample.Decode
@@ -14,7 +16,7 @@ namespace Draco.Sample.Decode
         [SerializeField]
         TextAsset m_DracoData;
 
-        async void Start()
+        async void OnEnable()
         {
             // Async decoding has to start on the main thread and spawns multiple C# jobs.
             var mesh = await DracoDecoder.DecodeMesh(m_DracoData.bytes);
@@ -25,6 +27,7 @@ namespace Draco.Sample.Decode
                 GetComponent<MeshFilter>().mesh = mesh;
             }
         }
+
 
         #endregion LoadDraco
     }

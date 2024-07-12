@@ -18,6 +18,8 @@ public class makeMapWithKTX : MonoBehaviour
     public TextMeshProUGUI _timeRequired;
     private Texture2D _mergedTexture;
     public Texture2D MergedTexture => _mergedTexture;
+    public TMP_Dropdown DD_resolution;
+    public Toggle isCombined;
 
     private Dictionary<int, CachedTexture> _textureCaches = new Dictionary<int, CachedTexture>();
 
@@ -35,39 +37,53 @@ public class makeMapWithKTX : MonoBehaviour
         DestroyCanvasChild();
         C_LoadJPGImage();
     }
+
     public async void LoadImagesKtx2(string Encode)
     {
-        if(Encode == "KTX")
-            _mergedTexture = new Texture2D(256 * 10, 256 * 5, TextureFormat.RGBA32,false);
-        else if(Encode=="ETC1S" || Encode == "UASTC")
-            _mergedTexture = new Texture2D(256 * 10, 256 * 5, TextureFormat.DXT1, false);
-        
+        if (isCombined.isOn)
+        {
+            string resolutionText = DD_resolution.options[DD_resolution.value].text;
+            string[] dimensions = resolutionText.Split('x');
+            int width = int.Parse(dimensions[0]);
+            int height = int.Parse(dimensions[1]);
+            if (Encode == "KTX")
+                _mergedTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            else if (Encode == "ETC1S" || Encode == "UASTC")
+                _mergedTexture = new Texture2D(width, height, TextureFormat.DXT1, false);
+        }
+        else
+        {
+            if (Encode == "KTX")
+                _mergedTexture = new Texture2D(256 * 10, 256 * 5, TextureFormat.RGBA32, false);
+            else if (Encode == "ETC1S" || Encode == "UASTC")
+                _mergedTexture = new Texture2D(256 * 10, 256 * 5, TextureFormat.DXT1, false);
+        }
+
         DestroyCanvasChild();
         System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
         sw.Start();
-        for (int y = 0; y < 5; y++)
+
+        if (isCombined.isOn)
         {
-            for (int x = 0; x < 10; x++)
+            string fileName = $"{DD_resolution.options[DD_resolution.value].text}.ktx2";
+            string imagePath = $"SaturateImages/{Encode}/combine/";
+            string filePath = Path.Combine(Application.dataPath, imagePath, fileName);
+            int fileHash = filePath.GetHashCode();
+
+            if (_textureCaches.ContainsKey(fileHash))
             {
-                string fileName = $"{y:D4}_{x:D4}.ktx2";
-                string imagePath = $"SaturateImages/{Encode}/{y:D4}/";
-                string filePath = Path.Combine(Application.dataPath, imagePath, fileName);
-                int fileHash = filePath.GetHashCode();
-
-                if (_textureCaches.ContainsKey(fileHash))
-                {
-                    CachedTexture cachedTexture = _textureCaches[fileHash];
-                    CreateImageObject(cachedTexture.Texture, x, 4 - y, cachedTexture.IsXFlipped, cachedTexture.IsYFlipped);
-                    continue;
-                }
-
+                CachedTexture cachedTexture = _textureCaches[fileHash];
+                CreateImageObject(cachedTexture.Texture, 0, 0, cachedTexture.IsXFlipped, cachedTexture.IsYFlipped, true);
+            }
+            else
+            {
                 var texture = new KtxTexture();
                 byte[] fileData = File.ReadAllBytes(filePath);
                 NativeArray<byte> nativeArray = new NativeArray<byte>(fileData, Allocator.Persistent);
                 NativeSlice<byte> nativeSlice = new NativeSlice<byte>(nativeArray);
 
                 var result = await texture.LoadFromBytes(nativeSlice);
-                nativeArray.Dispose(); // 로드하고 Dispose 
+                nativeArray.Dispose();
                 if (result != null)
                 {
                     Texture2D _texture = result.texture;
@@ -75,20 +91,57 @@ public class makeMapWithKTX : MonoBehaviour
                     {
                         bool isXFlip = result.orientation.IsXFlipped();
                         bool isYFlip = result.orientation.IsYFlipped();
-                        if (Encode == ("KTX")) isYFlip = false; // ktx는 --lower_left_maps_to_s0t0옵션을 주어도 yflip이 true로 나와 예외처리
+                        if (Encode == "KTX") isYFlip = false;
                         _textureCaches[fileHash] = new CachedTexture(_texture, isXFlip, isYFlip);
-                        CreateImageObject(_texture, x, 4 - y, isXFlip, isYFlip);
+                        CreateImageObject(_texture, 0, 0, isXFlip, isYFlip, true);
                     }
                 }
             }
         }
+        else
+        {
+            for (int y = 0; y < 5; y++)
+            {
+                for (int x = 0; x < 10; x++)
+                {
+                    string fileName = $"{y:D4}_{x:D4}.ktx2";
+                    string imagePath = $"SaturateImages/{Encode}/{y:D4}/";
+                    string filePath = Path.Combine(Application.dataPath, imagePath, fileName);
+                    int fileHash = filePath.GetHashCode();
+
+                    if (_textureCaches.ContainsKey(fileHash))
+                    {
+                        CachedTexture cachedTexture = _textureCaches[fileHash];
+                        CreateImageObject(cachedTexture.Texture, x, 4 - y, cachedTexture.IsXFlipped, cachedTexture.IsYFlipped);
+                        continue;
+                    }
+
+                    var texture = new KtxTexture();
+                    byte[] fileData = File.ReadAllBytes(filePath);
+                    NativeArray<byte> nativeArray = new NativeArray<byte>(fileData, Allocator.Persistent);
+                    NativeSlice<byte> nativeSlice = new NativeSlice<byte>(nativeArray);
+
+                    var result = await texture.LoadFromBytes(nativeSlice);
+                    nativeArray.Dispose();
+                    if (result != null)
+                    {
+                        Texture2D _texture = result.texture;
+                        if (_texture != null)
+                        {
+                            bool isXFlip = result.orientation.IsXFlipped();
+                            bool isYFlip = result.orientation.IsYFlipped();
+                            if (Encode == "KTX") isYFlip = false;
+                            _textureCaches[fileHash] = new CachedTexture(_texture, isXFlip, isYFlip);
+                            CreateImageObject(_texture, x, 4 - y, isXFlip, isYFlip);
+                        }
+                    }
+                }
+            }
+        }
+
         sw.Stop();
         _timeRequired.text = sw.ElapsedMilliseconds.ToString() + "ms";
-
-        
-        
     }
-
 
     void C_LoadJPGImage()
     {
@@ -106,7 +159,7 @@ public class makeMapWithKTX : MonoBehaviour
 
                 if (_textureCaches.ContainsKey(fileHash))
                 {
-                    CreateImageObject(_textureCaches[fileHash].Texture, x, 4 - y); // 해시로 변환해서 속도 좀 더 이득
+                    CreateImageObject(_textureCaches[fileHash].Texture, x, 4 - y);
                     continue;
                 }
 
@@ -117,7 +170,7 @@ public class makeMapWithKTX : MonoBehaviour
                 if (tmpTexture != null)
                 {
                     CreateImageObject(tmpTexture, x, 4 - y);
-                    _textureCaches[fileHash] = new CachedTexture(tmpTexture, false, false); // Cache the texture
+                    _textureCaches[fileHash] = new CachedTexture(tmpTexture, false, false);
                 }
             }
         }
@@ -125,17 +178,38 @@ public class makeMapWithKTX : MonoBehaviour
         _timeRequired.text = sw.ElapsedMilliseconds.ToString() + "ms";
     }
 
-    void CreateImageObject(Texture2D texture, int x, int y, bool isXFlip = false, bool isYFlip = false)
+    void CreateImageObject(Texture2D texture, int x, int y, bool isXFlip = false, bool isYFlip = false, bool isCombined = false)
     {
-        GameObject imageObject = new GameObject($"Image_{y}_{x}");
+        GameObject imageObject = new GameObject(isCombined ? "CombinedImage" : $"Image_{y}_{x}");
         imageObject.transform.SetParent(parentObj.transform);
 
         RectTransform rectTransform = imageObject.AddComponent<RectTransform>();
-        rectTransform.sizeDelta = new Vector2(imageWidth, imageHeight);
-        rectTransform.pivot = anchorPivot;
-        rectTransform.anchorMin = new Vector2(0, 1);
-        rectTransform.anchorMax = new Vector2(0, 1);
-        rectTransform.anchoredPosition = new Vector2(x * (imageWidth + spacing), -y * (imageHeight + spacing));
+        if (isCombined)
+        {
+            // Get parent RectTransform
+            RectTransform parentRectTransform = parentObj.GetComponent<RectTransform>();
+
+            // Set size
+            rectTransform.sizeDelta = new Vector2(texture.width, texture.height);
+
+            // Center the image
+            rectTransform.anchoredPosition = new Vector2(0, 0);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+
+            // Set anchors to center
+            rectTransform.anchorMin = new Vector2(0.5f, 0.5f); // Modify anchorMin to center
+            rectTransform.anchorMax = new Vector2(0.5f, 0.5f); // Modify anchorMax to center
+        }
+        else
+        {
+            rectTransform.sizeDelta = new Vector2(imageWidth, imageHeight);
+            rectTransform.anchoredPosition = new Vector2(x * (imageWidth + spacing), -y * (imageHeight + spacing));
+            rectTransform.pivot = anchorPivot;
+
+            // Set anchors to top-left for individual images
+            rectTransform.anchorMin = new Vector2(0, 1); // No change needed
+            rectTransform.anchorMax = new Vector2(0, 1); // No change needed
+        }
 
         Image image = imageObject.AddComponent<Image>();
 
@@ -153,12 +227,19 @@ public class makeMapWithKTX : MonoBehaviour
             rect.y = texture.height;
             rect.height = -texture.height;
         }
-        Debug.Log("texture Width : "+texture.width + "texture Height : " + texture.height + "imageWidth : " + imageWidth + "imageHeight : " + imageHeight);
-        Graphics.CopyTexture(texture, 0, 0, 0, 0, texture.width, texture.height, MergedTexture, 0, 0, x * texture.width, (4 - y) * texture.height);
-        
-        image.sprite = Sprite.Create(texture, rect, pivot);
 
+        if (isCombined)
+        {
+            Graphics.CopyTexture(texture, 0, 0, 0, 0, texture.width, texture.height, MergedTexture, 0, 0, 0, 0);
+        }
+        else
+        {
+            Graphics.CopyTexture(texture, 0, 0, 0, 0, texture.width, texture.height, MergedTexture, 0, 0, x * texture.width, (4 - y) * texture.height);
+        }
+
+        image.sprite = Sprite.Create(texture, rect, pivot);
     }
+
 
     private class CachedTexture
     {
@@ -171,6 +252,6 @@ public class makeMapWithKTX : MonoBehaviour
             Texture = texture;
             IsXFlipped = isXFlipped;
             IsYFlipped = isYFlipped;
-        } // 이상하게 한번 저장된값 꺼내오면 flip상태가 자기 멋대로 되어있으므로, 여기서 완성
+        }
     }
 }
