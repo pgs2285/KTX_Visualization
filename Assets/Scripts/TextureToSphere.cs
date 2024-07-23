@@ -20,9 +20,12 @@ public class TextureToSphere : MonoBehaviour
     {
         mesh = new Mesh();
 
-        // 위도와 경도에 따른 vertex의 개수 정의
-        int[] latitudeSegments = new int[] { 0, 22, 45, 67, 90 }; 
-        int[] longitudeSegments = new int[] { 45, 90, 180, 360, 360 };
+        // 위도와 경도를 정의
+        //int[] latitudeSegments = new int[] { 0, 69, 113, 158, 180 };
+        //int[] longitudeSegments = new int[] { 45, 180, 360, 180, 45 };
+
+        int[] latitudeSegments = new int[] { 0, 1, 179,180 };
+        int[] longitudeSegments = new int[]{ 0, 45, 360, 45 };
 
         // 버텍스와 삼각형 개수 계산
         int vertCount = CalculateVertexCount(latitudeSegments, longitudeSegments);
@@ -37,13 +40,13 @@ public class TextureToSphere : MonoBehaviour
 
         for (int i = 1; i < latitudeSegments.Length; i++)
         {
-            int latSegmentsPrev = latitudeSegments[i - 1];
-            int latSegments = latitudeSegments[i];
+            int prevLat = latitudeSegments[i - 1];
+            int currLat = latitudeSegments[i];
             int lonSegments = longitudeSegments[i];
 
-            for (int lat = latSegmentsPrev; lat <= latSegments; lat++)
+            for (int lat = prevLat; lat <= currLat; lat++)
             {
-                float latFraction = (float)lat / 90f;
+                float latFraction = (float)lat / 180f;
                 float latitude = Mathf.Lerp(-Mathf.PI / 2, Mathf.PI / 2, latFraction);
 
                 for (int lon = 0; lon <= lonSegments; lon++)
@@ -60,18 +63,21 @@ public class TextureToSphere : MonoBehaviour
                     // UV 좌표 계산
                     uv[vertIndex] = new Vector2(lonFraction, latFraction);
 
-                    if (lat < latSegments && lon < lonSegments)
+                    if (lat < currLat && lon < lonSegments)
                     {
                         int current = vertIndex;
                         int next = vertIndex + lonSegments + 1;
 
-                        triangles[triIndex++] = current;
-                        triangles[triIndex++] = next;
-                        triangles[triIndex++] = current + 1;
-
-                        triangles[triIndex++] = current + 1;
-                        triangles[triIndex++] = next;
-                        triangles[triIndex++] = next + 1;
+                        if (next < vertices.Length && current + 1 < vertices.Length && next + 1 < vertices.Length)
+                        {
+                            triangles[triIndex++] = current;
+                            triangles[triIndex++] = next;
+                            triangles[triIndex++] = current + 1;
+                            
+                            triangles[triIndex++] = current + 1;
+                            triangles[triIndex++] = next;
+                            triangles[triIndex++] = next + 1;
+                        }
                     }
 
                     vertIndex++;
@@ -93,11 +99,11 @@ public class TextureToSphere : MonoBehaviour
         int count = 0;
         for (int i = 1; i < latitudeSegments.Length; i++)
         {
-            int latSegmentsPrev = latitudeSegments[i - 1];
-            int latSegments = latitudeSegments[i];
+            int prevLat = latitudeSegments[i - 1];
+            int currLat = latitudeSegments[i];
             int lonSegments = longitudeSegments[i];
 
-            for (int lat = latSegmentsPrev; lat <= latSegments; lat++)
+            for (int lat = prevLat; lat <= currLat; lat++)
             {
                 count += (lonSegments + 1);
             }
@@ -110,11 +116,11 @@ public class TextureToSphere : MonoBehaviour
         int count = 0;
         for (int i = 1; i < latitudeSegments.Length; i++)
         {
-            int latSegmentsPrev = latitudeSegments[i - 1];
-            int latSegments = latitudeSegments[i];
+            int prevLat = latitudeSegments[i - 1];
+            int currLat = latitudeSegments[i];
             int lonSegments = longitudeSegments[i];
 
-            for (int lat = latSegmentsPrev; lat < latSegments; lat++)
+            for (int lat = prevLat; lat < currLat; lat++)
             {
                 count += lonSegments * 2;
             }
