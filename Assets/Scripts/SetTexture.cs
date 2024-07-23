@@ -17,7 +17,7 @@ public class SetTexture : MonoBehaviour
         //if (tex == null) Debug.LogWarning("Texture가 생성되지 않았습니다");
         //meshed.GetComponent<MeshRenderer>().material.mainTexture = tex;
         if(glb != null )
-            glb.createMapToSphere(tex);
+            glb.CreateMapToSphere(tex);
         else
         {
             GameObject.FindWithTag("Sphere").GetComponent<MeshRenderer>().material.mainTexture = makeMap.MergedTexture;

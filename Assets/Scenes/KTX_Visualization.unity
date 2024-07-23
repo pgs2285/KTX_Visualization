@@ -551,9 +551,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mapTexture: {fileID: 0}
-  longitudeSegments: 360
+  centralLongitudeSegments: 360
+  endLongitudeSegments: 45
   latitudeSegments: 180
   radius: 1
+  markerPrefab: {fileID: 0}
 --- !u!1 &154974574
 GameObject:
   m_ObjectHideFlags: 0
@@ -2875,12 +2877,12 @@ GameObject:
   - component: {fileID: 1497830675}
   - component: {fileID: 1497830674}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: DRC_Sphere
   m_TagString: Sphere
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1497830674
 MonoBehaviour:
   m_ObjectHideFlags: 0
