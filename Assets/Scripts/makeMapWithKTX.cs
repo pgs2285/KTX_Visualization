@@ -7,6 +7,7 @@ using UnityEngine.Networking;
 using System.IO;
 using Unity.Collections;
 using System.Collections.Generic;
+using GLTFast;
 
 public class makeMapWithKTX : MonoBehaviour
 {
@@ -22,6 +23,7 @@ public class makeMapWithKTX : MonoBehaviour
     public Toggle isCombined;
 
     private Dictionary<int, CachedTexture> _textureCaches = new Dictionary<int, CachedTexture>();
+    private Dictionary<int, CachedTexture> _textureCaches2 = new Dictionary<int, CachedTexture>();
 
     private void DestroyCanvasChild()
     {
@@ -37,6 +39,136 @@ public class makeMapWithKTX : MonoBehaviour
         DestroyCanvasChild();
         C_LoadJPGImage();
     }
+
+    #region TestWith gltfast(Managed Native Array)
+    public async void LoadImagesKtxGL(string Encode)
+    {
+        if (isCombined.isOn)
+        {
+            string resolutionText = DD_resolution.options[DD_resolution.value].text;
+            string[] dimensions = resolutionText.Split('x');
+            int width = int.Parse(dimensions[0]);
+            int height = int.Parse(dimensions[1]);
+            if (Encode == "KTX")
+                _mergedTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            else if (Encode == "ETC1S" || Encode == "UASTC")
+                _mergedTexture = new Texture2D(width, height, TextureFormat.DXT1, false);
+        }
+        else
+        {
+            if (Encode == "KTX")
+                _mergedTexture = new Texture2D(256 * 10, 256 * 5, TextureFormat.RGBA32, false);
+            else if (Encode == "ETC1S" || Encode == "UASTC")
+                _mergedTexture = new Texture2D(256 * 10, 256 * 5, TextureFormat.DXT1, false);
+        }
+
+        DestroyCanvasChild();
+        System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+        sw.Start();
+
+        if (isCombined.isOn)
+        {
+            string fileName = $"{DD_resolution.options[DD_resolution.value].text}.ktx2";
+            string imagePath = $"SaturateImages/{Encode}/combine/";
+            string filePath = Path.Combine(Application.dataPath, imagePath, fileName);
+            int fileHash = filePath.GetHashCode();
+
+            if (_textureCaches2.ContainsKey(fileHash))
+            {
+                CachedTexture cachedTexture = _textureCaches2[fileHash];
+                CreateImageObject(cachedTexture.Texture, 0, 0, cachedTexture.IsXFlipped, cachedTexture.IsYFlipped, true);
+            }
+            else
+            {
+                var texture = new KtxTexture();
+                byte[] fileData = File.ReadAllBytes(filePath);
+
+                
+                using (var array = new ManagedNativeArray(fileData))
+                {
+                    
+                    var errorCode = texture.Open(array.nativeArray);
+                    if (errorCode != ErrorCode.Success)
+                    {
+                        Debug.LogError("Failed to open KTX texture: " + errorCode);
+                        return;
+                    }
+
+                    var result = await texture.LoadTexture2D(false);
+                    texture.Dispose();
+
+                    if (result != null)
+                    {
+                        Texture2D _texture = result.texture;
+                        if (_texture != null)
+                        {
+                            bool isXFlip = result.orientation.IsXFlipped();
+                            bool isYFlip = result.orientation.IsYFlipped();
+                            if (Encode == "KTX") isYFlip = false;
+                            _textureCaches2[fileHash] = new CachedTexture(_texture, isXFlip, isYFlip);
+                            CreateImageObject(_texture, 0, 0, isXFlip, isYFlip, true);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            for (int y = 0; y < 5; y++)
+            {
+                for (int x = 0; x < 10; x++)
+                {
+                    string fileName = $"{y:D4}_{x:D4}.ktx2";
+                    string imagePath = $"SaturateImages/{Encode}/{y:D4}/";
+                    string filePath = Path.Combine(Application.dataPath, imagePath, fileName);
+                    int fileHash = filePath.GetHashCode();
+
+                    if (_textureCaches2.ContainsKey(fileHash))
+                    {
+                        CachedTexture cachedTexture = _textureCaches2[fileHash];
+                        CreateImageObject(cachedTexture.Texture, x, 4 - y, cachedTexture.IsXFlipped, cachedTexture.IsYFlipped);
+                        continue;
+                    }
+
+                    var texture = new KtxTexture();
+                    byte[] fileData = File.ReadAllBytes(filePath);
+
+            
+                    using (var array = new ManagedNativeArray(fileData))
+                    {
+                        var errorCode = texture.Open(array.nativeArray);
+                        if (errorCode != ErrorCode.Success)
+                        {
+                            Debug.LogError("Failed to open KTX texture: " + errorCode);
+                            continue;
+                        }
+
+                        var result = await texture.LoadTexture2D(false);
+                        texture.Dispose();
+
+                        if (result != null)
+                        {
+                            Texture2D _texture = result.texture;
+                            if (_texture != null)
+                            {
+                                bool isXFlip = result.orientation.IsXFlipped();
+                                bool isYFlip = result.orientation.IsYFlipped();
+                                if (Encode == "KTX") isYFlip = false;
+                                _textureCaches2[fileHash] = new CachedTexture(_texture, isXFlip, isYFlip);
+                                CreateImageObject(_texture, x, 4 - y, isXFlip, isYFlip);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        sw.Stop();
+        _timeRequired.text = sw.ElapsedMilliseconds.ToString() + "ms";
+    }
+    #endregion
+
+    #region Test LoadFromBytes(NativeArray)
 
     public async void LoadImagesKtx2(string Encode)
     {
@@ -83,6 +215,7 @@ public class makeMapWithKTX : MonoBehaviour
                 NativeSlice<byte> nativeSlice = new NativeSlice<byte>(nativeArray);
 
                 var result = await texture.LoadFromBytes(nativeSlice);
+            
                 nativeArray.Dispose();
                 if (result != null)
                 {
@@ -138,11 +271,12 @@ public class makeMapWithKTX : MonoBehaviour
                 }
             }
         }
+  
 
         sw.Stop();
         _timeRequired.text = sw.ElapsedMilliseconds.ToString() + "ms";
     }
-
+    #endregion 
     void C_LoadJPGImage()
     {
         _mergedTexture = new Texture2D(256 * 10, 256 * 5, TextureFormat.RGBA32, false);
